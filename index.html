@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#062b43">
+  <title>Pickleball Open Play</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="logo-mark">🏓</div>
+  <div class="brand">
+    <strong>RIMBERIO SPORTS</strong>
+    <span>PICKLEBALL OPEN PLAY</span>
+  </div>
+  <button class="menu-btn" id="menuBtn" aria-label="Open menu">☰</button>
+</header>
+
+<main>
+  <!-- POSTER-STYLE HOME -->
+  <section class="hero" id="home">
+    <div class="court-art" aria-hidden="true">
+      <div class="net-art"></div>
+      <div class="court-line line-a"></div>
+      <div class="court-line line-b"></div>
+      <div class="paddle-art"></div>
+      <div class="ball-art">●</div>
+    </div>
+
+    <div class="hero-content">
+      <div class="sport-name">RIMBERIO SPORTS</div>
+      <div class="ball-logo">🏓</div>
+      <div class="script-title">Pickleball</div>
+      <div class="orange-stroke"></div>
+      <h1>OPEN<br>PLAY</h1>
+      <div class="hero-pill">4 PLAYERS • ROTATIONAL FORMAT</div>
+      <p>Draw lots. Rotate partners. Record every game.</p>
+      <button class="hero-button" data-go="manager">START OPEN PLAY <span>→</span></button>
+    </div>
+
+    <div class="vertical-note left">OPEN PLAY • 4 PLAYER COURT</div>
+    <div class="vertical-note right">DRAW • ROTATE • RECORD</div>
+    <div class="handle">@RIMBERIO SPORTS • OFFLINE APP</div>
+  </section>
+
+  <!-- MANAGER -->
+  <section class="manager" id="manager">
+    <div class="section-top">
+      <div>
+        <span class="kicker">OPEN PLAY MANAGER</span>
+        <h2>Run the session.</h2>
+        <p>Everything stays on this device. No account, server, or internet required.</p>
+      </div>
+      <div class="offline-badge"><i></i> OFFLINE</div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" data-tab="setup">01 SETUP</button>
+      <button class="tab" data-tab="draw">02 DRAW LOT</button>
+      <button class="tab" data-tab="match">03 MATCH</button>
+      <button class="tab" data-tab="standings">04 STANDINGS</button>
+      <button class="tab" data-tab="history">05 HISTORY</button>
+    </div>
+
+    <!-- SETUP -->
+    <div class="tab-panel active" id="tab-setup">
+      <div class="panel-head">
+        <span class="kicker">PLAYER ROSTER</span>
+        <h3>Four players. One court.</h3>
+      </div>
+
+      <div class="player-grid">
+        <label class="player-input"><span>PLAYER 01</span><input id="player1" maxlength="24" placeholder="Enter name"></label>
+        <label class="player-input"><span>PLAYER 02</span><input id="player2" maxlength="24" placeholder="Enter name"></label>
+        <label class="player-input"><span>PLAYER 03</span><input id="player3" maxlength="24" placeholder="Enter name"></label>
+        <label class="player-input"><span>PLAYER 04</span><input id="player4" maxlength="24" placeholder="Enter name"></label>
+      </div>
+
+      <div class="action-row">
+        <button class="btn primary" id="startBtn">START SESSION →</button>
+        <button class="btn ghost" id="sampleBtn">LOAD SAMPLE</button>
+      </div>
+
+      <div class="feature-strip">
+        <div><b>🎡</b><span>Random draw<br><small>Choose the first pairing</small></span></div>
+        <div><b>🔄</b><span>Partner rotation<br><small>All 3 combinations</small></span></div>
+        <div><b>📊</b><span>Live records<br><small>Wins + points + history</small></span></div>
+      </div>
+    </div>
+
+    <!-- DRAW -->
+    <div class="tab-panel" id="tab-draw">
+      <div class="draw-layout">
+        <div class="wheel-wrap">
+          <div class="pointer">▼</div>
+          <canvas id="wheel" width="430" height="430"></canvas>
+        </div>
+        <div class="draw-side">
+          <span class="kicker">RANDOM DRAW</span>
+          <h3>Who gets the first pick?</h3>
+          <p>Spin the wheel once. The selected player becomes the first player in the opening pairing.</p>
+          <div class="draw-result" id="drawResult">READY TO SPIN</div>
+          <button class="btn primary full" id="spinBtn">🎡 SPIN THE WHEEL</button>
+          <button class="btn ghost full" id="toMatchBtn">GO TO MATCH →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MATCH -->
+    <div class="tab-panel" id="tab-match">
+      <div class="match-head">
+        <div>
+          <span class="kicker">CURRENT ROUND</span>
+          <h3>Round <b id="roundNumber">1</b></h3>
+        </div>
+        <div class="round-buttons">
+          <button class="square-btn" id="prevRound">←</button>
+          <button class="square-btn" id="nextRound">→</button>
+        </div>
+      </div>
+
+      <div class="court">
+        <div class="court-title">OPEN PLAY COURT</div>
+        <div class="court-half">
+          <span class="team-label">TEAM A</span>
+          <div class="court-player" id="teamA1">PLAYER 01</div>
+          <div class="court-player" id="teamA2">PLAYER 02</div>
+        </div>
+        <div class="court-net"><span>NET</span></div>
+        <div class="court-half">
+          <span class="team-label">TEAM B</span>
+          <div class="court-player" id="teamB1">PLAYER 03</div>
+          <div class="court-player" id="teamB2">PLAYER 04</div>
+        </div>
+      </div>
+
+      <div class="scoreboard">
+        <div class="score-side">
+          <span>TEAM A</span>
+          <input id="scoreA" type="number" min="0" max="99" value="0">
+        </div>
+        <div class="versus">VS</div>
+        <div class="score-side">
+          <span>TEAM B</span>
+          <input id="scoreB" type="number" min="0" max="99" value="0">
+        </div>
+      </div>
+
+      <div class="action-row center">
+        <button class="btn primary" id="recordBtn">✓ RECORD MATCH</button>
+        <button class="btn ghost" id="clearScoreBtn">CLEAR SCORE</button>
+      </div>
+      <div class="success-message" id="recordMessage"></div>
+    </div>
+
+    <!-- STANDINGS -->
+    <div class="tab-panel" id="tab-standings">
+      <div class="panel-head">
+        <span class="kicker">LIVE LEADERBOARD</span>
+        <h3>Session standings</h3>
+      </div>
+      <div class="mini-stats">
+        <div><span>MATCHES</span><b id="statMatches">0</b></div>
+        <div><span>ROUNDS</span><b id="statRounds">1</b></div>
+        <div><span>LEADER</span><b id="statLeader">—</b></div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>#</th><th>PLAYER</th><th>W</th><th>L</th><th>PF</th><th>PA</th><th>DIFF</th><th>WIN %</th></tr></thead>
+          <tbody id="standingsBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- HISTORY -->
+    <div class="tab-panel" id="tab-history">
+      <div class="panel-head history-head">
+        <div><span class="kicker">MATCH LOG</span><h3>Game history</h3></div>
+        <button class="btn danger" id="clearHistoryBtn">CLEAR HISTORY</button>
+      </div>
+      <div id="historyList" class="history-list"></div>
+    </div>
+
+    <div class="app-footer">
+      <span>PICKLEBALL OPEN PLAY</span>
+      <span>LOCAL STORAGE • WORKS OFFLINE</span>
+    </div>
+  </section>
+</main>
+
+<div class="toast" id="toast"></div>
+<script src="script.js"></script>
+</body>
+</html>
