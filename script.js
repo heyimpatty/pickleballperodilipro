@@ -1,1631 +1,2360 @@
-const KEY = "pickleball_open_play_v2";
+const KEY = "pickleball_open_play_unlimited_v3";
 
 let state = {
-    players: ["", "", "", ""],
-    round: 0,
-    matches: [],
-    selected: null,
-    spun: false
+  players: [],
+  round: 0,
+  matches: [],
+  selected: null,
+  spun: false,
+  rotationSeed: []
 };
 
 let wheelAngle = 0;
 
-const $ = (id) => document.getElementById(id);
-
-const wheelColors = [
-    "#55eaff",
-    "#ffe000",
-    "#ff8b16",
-    "#2d78b1"
+const colors = [
+  "#55eaff",
+  "#ffe000",
+  "#ff8b16",
+  "#2d78b1",
+  "#54f28c",
+  "#ff5570",
+  "#b86cff",
+  "#00c2ff"
 ];
 
 
-// ==========================================
-// START
-// ==========================================
+const $ = id => document.getElementById(id);
 
-document.addEventListener("DOMContentLoaded", () => {
-    loadData();
-    bindEvents();
-    drawWheel();
+
+/* ================= START ================= */
+
+document.addEventListener(
+  "DOMContentLoaded",
+  () => {
+
+    load();
+
+    bind();
+
     render();
-});
+
+    drawWheel();
+
+  }
+);
 
 
-// ==========================================
-// LOCAL STORAGE
-// ==========================================
+/* ================= STORAGE ================= */
 
-function loadData() {
+function load() {
 
-    try {
+  try {
 
-        const saved = localStorage.getItem(KEY);
+    const saved =
+      localStorage.getItem(KEY);
 
-        if (saved) {
-            state = {
-                ...state,
-                ...JSON.parse(saved)
-            };
-        }
+    if (saved) {
 
-    } catch (error) {
-        console.log("Unable to load saved data.");
+      const parsed =
+        JSON.parse(saved);
+
+      state = {
+        ...state,
+        ...parsed
+      };
+
     }
 
-    state.players.forEach((player, index) => {
+  } catch (error) {
 
-        const input = $(`player${index + 1}`);
-
-        if (input) {
-            input.value = player;
-        }
-
-    });
-}
-
-
-function saveData() {
-
-    localStorage.setItem(
-        KEY,
-        JSON.stringify(state)
+    console.log(
+      "Could not load saved session.",
+      error
     );
 
+  }
+
 }
 
 
-// ==========================================
-// EVENT LISTENERS
-// ==========================================
+function save() {
 
-function bindEvents() {
+  localStorage.setItem(
+    KEY,
+    JSON.stringify(state)
+  );
 
-    // Tabs
-    document.querySelectorAll(".tab").forEach(button => {
+}
 
-        button.addEventListener("click", () => {
 
-            openTab(button.dataset.tab);
+/* ================= EVENTS ================= */
 
-        });
+function bind() {
+
+  document
+    .querySelectorAll(".tab")
+    .forEach(button => {
+
+      button.addEventListener(
+        "click",
+        () => openTab(
+          button.dataset.tab
+        )
+      );
 
     });
 
 
-    // Hero button
-    document.querySelectorAll("[data-go]").forEach(button => {
+  document
+    .querySelectorAll("[data-go]")
+    .forEach(button => {
 
-        button.addEventListener("click", () => {
+      button.addEventListener(
+        "click",
+        () => {
 
-            const destination = document.getElementById(
-                button.dataset.go
+          const target =
+            document.getElementById(
+              button.dataset.go
             );
 
-            if (destination) {
+          if (target) {
 
-                destination.scrollIntoView({
-                    behavior: "smooth"
-                });
+            target.scrollIntoView({
+              behavior: "smooth"
+            });
 
-            }
+          }
 
-        });
-
-    });
-
-
-    // Start session
-    $("startBtn").addEventListener(
-        "click",
-        startSession
-    );
-
-
-    // Sample players
-    $("sampleBtn").addEventListener(
-        "click",
-        loadSamplePlayers
-    );
-
-
-    // Wheel
-    $("spinBtn").addEventListener(
-        "click",
-        spinWheel
-    );
-
-
-    // Go to match
-    $("toMatchBtn").addEventListener(
-        "click",
-        () => openTab("match")
-    );
-
-
-    // Previous round
-    $("prevRound").addEventListener(
-        "click",
-        () => changeRound(-1)
-    );
-
-
-    // Next round
-    $("nextRound").addEventListener(
-        "click",
-        () => changeRound(1)
-    );
-
-
-    // Record match
-    $("recordBtn").addEventListener(
-        "click",
-        recordMatch
-    );
-
-
-    // Clear score
-    $("clearScoreBtn").addEventListener(
-        "click",
-        clearScore
-    );
-
-
-    // Clear history
-    $("clearHistoryBtn").addEventListener(
-        "click",
-        clearHistory
-    );
-
-
-    // Save player names whenever they change
-    for (let i = 1; i <= 4; i++) {
-
-        const input = $(`player${i}`);
-
-        input.addEventListener("input", () => {
-
-            state.players = getPlayers();
-
-            saveData();
-
-            drawWheel();
-
-        });
-
-    }
-
-}
-
-
-// ==========================================
-// TABS
-// ==========================================
-
-function openTab(tabName) {
-
-    document.querySelectorAll(".tab").forEach(button => {
-
-        button.classList.toggle(
-            "active",
-            button.dataset.tab === tabName
-        );
+        }
+      );
 
     });
 
 
-    document.querySelectorAll(".tab-panel").forEach(panel => {
+  $("addPlayerBtn")
+    .addEventListener(
+      "click",
+      addPlayerFromInput
+    );
 
-        panel.classList.toggle(
-            "active",
-            panel.id === `tab-${tabName}`
-        );
+
+  $("newPlayer")
+    .addEventListener(
+      "keydown",
+      event => {
+
+        if (event.key === "Enter") {
+
+          addPlayerFromInput();
+
+        }
+
+      }
+    );
+
+
+  $("startBtn")
+    .addEventListener(
+      "click",
+      startSession
+    );
+
+
+  $("sampleBtn")
+    .addEventListener(
+      "click",
+      sample
+    );
+
+
+  $("clearPlayersBtn")
+    .addEventListener(
+      "click",
+      clearPlayers
+    );
+
+
+  $("spinBtn")
+    .addEventListener(
+      "click",
+      spin
+    );
+
+
+  $("toMatchBtn")
+    .addEventListener(
+      "click",
+      () => openTab("match")
+    );
+
+
+  $("prevRound")
+    .addEventListener(
+      "click",
+      () => changeRound(-1)
+    );
+
+
+  $("nextRound")
+    .addEventListener(
+      "click",
+      () => changeRound(1)
+    );
+
+
+  $("clearHistoryBtn")
+    .addEventListener(
+      "click",
+      clearHistory
+    );
+
+}
+
+
+/* ================= TABS ================= */
+
+function openTab(tab) {
+
+  document
+    .querySelectorAll(".tab")
+    .forEach(button => {
+
+      button.classList.toggle(
+        "active",
+        button.dataset.tab === tab
+      );
 
     });
 
 
-    if (tabName === "draw") {
-        drawWheel();
-    }
+  document
+    .querySelectorAll(".tab-panel")
+    .forEach(panel => {
+
+      panel.classList.toggle(
+        "active",
+        panel.id === "tab-" + tab
+      );
+
+    });
 
 
-    if (tabName === "match") {
-        renderMatch();
-    }
+  if (tab === "draw") {
+
+    drawWheel();
+
+  }
 
 
-    if (tabName === "standings") {
-        renderStandings();
-    }
+  if (tab === "match") {
+
+    renderMatch();
+
+  }
 
 
-    if (tabName === "history") {
-        renderHistory();
-    }
+  if (tab === "standings") {
+
+    renderStandings();
+
+  }
+
+
+  if (tab === "history") {
+
+    renderHistory();
+
+  }
 
 }
 
 
-// ==========================================
-// GET PLAYERS
-// ==========================================
+/* ================= PLAYERS ================= */
 
-function getPlayers() {
+function addPlayerFromInput() {
 
-    return [
-        $("player1").value.trim(),
-        $("player2").value.trim(),
-        $("player3").value.trim(),
-        $("player4").value.trim()
-    ];
+  const input =
+    $("newPlayer");
+
+  const name =
+    input.value.trim();
+
+  if (!name) {
+
+    toast(
+      "Please enter a player name."
+    );
+
+    return;
+
+  }
+
+
+  if (
+    state.players.some(
+      player =>
+        player.toLowerCase() ===
+        name.toLowerCase()
+    )
+  ) {
+
+    toast(
+      "That player is already added."
+    );
+
+    return;
+
+  }
+
+
+  state.players.push(name);
+
+  input.value = "";
+
+  save();
+
+  render();
+
+  input.focus();
+
+  toast(
+    `${name} added to the roster.`
+  );
 
 }
 
 
-// ==========================================
-// START SESSION
-// ==========================================
+function removePlayer(index) {
+
+  if (
+    index < 0 ||
+    index >= state.players.length
+  ) {
+
+    return;
+
+  }
+
+
+  const name =
+    state.players[index];
+
+
+  if (
+    state.matches.length > 0
+  ) {
+
+    toast(
+      "You cannot remove players after matches have been recorded."
+    );
+
+    return;
+
+  }
+
+
+  state.players.splice(
+    index,
+    1
+  );
+
+  save();
+
+  render();
+
+  toast(
+    `${name} removed.`
+  );
+
+}
+
+
+function clearPlayers() {
+
+  if (
+    !state.players.length
+  ) {
+
+    toast(
+      "There are no players to clear."
+    );
+
+    return;
+
+  }
+
+
+  if (
+    state.matches.length
+  ) {
+
+    toast(
+      "Start a new session before clearing players."
+    );
+
+    return;
+
+  }
+
+
+  if (
+    !confirm(
+      "Clear all players?"
+    )
+  ) {
+
+    return;
+
+  }
+
+
+  state.players = [];
+
+  state.rotationSeed = [];
+
+  state.selected = null;
+
+  state.spun = false;
+
+  save();
+
+  render();
+
+  toast(
+    "Player roster cleared."
+  );
+
+}
+
+
+/* ================= SAMPLE ================= */
+
+function sample() {
+
+  const samplePlayers = [
+    "Patrick",
+    "Mark",
+    "John",
+    "Michael",
+    "James",
+    "Peter",
+    "Chris",
+    "Ryan",
+    "Alex",
+    "David",
+    "Kevin",
+    "Daniel"
+  ];
+
+
+  if (
+    state.matches.length
+  ) {
+
+    toast(
+      "Start a new session before loading sample players."
+    );
+
+    return;
+
+  }
+
+
+  state.players =
+    samplePlayers;
+
+  save();
+
+  render();
+
+  toast(
+    "12 sample players loaded."
+  );
+
+}
+
+
+/* ================= SESSION ================= */
 
 function startSession() {
 
-    const players = getPlayers();
+  const p =
+    state.players
+      .map(
+        player =>
+          player.trim()
+      )
+      .filter(Boolean);
 
 
-    // Check empty names
-    if (players.some(player => player === "")) {
-
-        toast(
-            "Please enter all four player names."
-        );
-
-        return;
-    }
-
-
-    // Check duplicate names
-    const uniqueNames = new Set(
-        players.map(player =>
-            player.toLowerCase()
-        )
-    );
-
-
-    if (uniqueNames.size !== 4) {
-
-        toast(
-            "Player names must be unique."
-        );
-
-        return;
-    }
-
-
-    state = {
-
-        players: players,
-
-        round: 0,
-
-        matches: [],
-
-        selected: null,
-
-        spun: false
-
-    };
-
-
-    saveData();
-
-    render();
-
-    openTab("draw");
+  if (p.length < 4) {
 
     toast(
-        "Open Play session started."
+      "You need at least 4 players to start."
     );
+
+    return;
+
+  }
+
+
+  const unique =
+    new Set(
+      p.map(
+        player =>
+          player.toLowerCase()
+      )
+    );
+
+
+  if (
+    unique.size !== p.length
+  ) {
+
+    toast(
+      "Player names must be unique."
+    );
+
+    return;
+
+  }
+
+
+  state = {
+
+    players: p,
+
+    round: 0,
+
+    matches: [],
+
+    selected: null,
+
+    spun: false,
+
+    rotationSeed: shuffle(
+      [...p]
+    )
+
+  };
+
+
+  save();
+
+  render();
+
+  openTab("draw");
+
+  toast(
+    `${p.length} players ready.`
+  );
 
 }
 
 
-// ==========================================
-// SAMPLE PLAYERS
-// ==========================================
+/* ================= COURTS ================= */
 
-function loadSamplePlayers() {
+function getCourtCount() {
 
-    const samplePlayers = [
-        "Patrick",
-        "Mark",
-        "John",
-        "Michael"
+  return Math.floor(
+    state.players.length / 4
+  );
+
+}
+
+
+function getWaitingCount() {
+
+  return (
+    state.players.length %
+    4
+  );
+
+}
+
+
+/* ================= ROTATION ================= */
+
+/*
+  The rotation works by moving the
+  player list one position every round.
+
+  Example:
+
+  Round 1:
+  A B C D
+  E F G H
+
+  Round 2:
+  B C D E
+  F G H A
+
+  Round 3:
+  C D E F
+  G H A B
+
+  This gives players different
+  court groups over time.
+*/
+
+function getRotationPlayers() {
+
+  if (
+    !state.rotationSeed.length
+  ) {
+
+    state.rotationSeed =
+      shuffle(
+        [...state.players]
+      );
+
+  }
+
+
+  const players =
+    state.rotationSeed;
+
+
+  const shift =
+    state.round %
+    players.length;
+
+
+  return [
+    ...players.slice(shift),
+    ...players.slice(0, shift)
+  ];
+
+}
+
+
+/* ================= MATCH DATA ================= */
+
+function getRoundMatches() {
+
+  const players =
+    getRotationPlayers();
+
+
+  const courtCount =
+    getCourtCount();
+
+
+  const courts = [];
+
+  const used = [];
+
+
+  for (
+    let court = 0;
+    court < courtCount;
+    court++
+  ) {
+
+    const start =
+      court * 4;
+
+
+    const group =
+      players.slice(
+        start,
+        start + 4
+      );
+
+
+    if (
+      group.length < 4
+    ) {
+
+      continue;
+
+    }
+
+
+    const teamA = [
+      group[0],
+      group[1]
     ];
 
 
-    samplePlayers.forEach((name, index) => {
+    const teamB = [
+      group[2],
+      group[3]
+    ];
 
-        $(`player${index + 1}`).value = name;
+
+    courts.push({
+
+      court: court + 1,
+
+      teamA,
+
+      teamB
 
     });
 
 
-    state.players = getPlayers();
-
-    saveData();
-
-    drawWheel();
-
-    toast(
-        "Sample players loaded."
+    used.push(
+      ...group
     );
 
-}
+  }
 
 
-// ==========================================
-// ROTATION SYSTEM
-// ==========================================
-
-function getRotations() {
-
-    const players = state.players;
+  const waiting =
+    players.filter(
+      player =>
+        !used.includes(player)
+    );
 
 
-    if (
-        players.length !== 4 ||
-        players.some(player => player === "")
-    ) {
-
-        return null;
-
-    }
-
-
-    return [
-
-        // Round 1
-        [
-            [players[0], players[1]],
-            [players[2], players[3]]
-        ],
-
-        // Round 2
-        [
-            [players[0], players[2]],
-            [players[1], players[3]]
-        ],
-
-        // Round 3
-        [
-            [players[0], players[3]],
-            [players[1], players[2]]
-        ]
-
-    ];
+  return {
+    courts,
+    waiting
+  };
 
 }
 
 
-// ==========================================
-// CURRENT TEAMS
-// ==========================================
-
-function getCurrentTeams() {
-
-    const rotations = getRotations();
-
-
-    if (!rotations) {
-        return null;
-    }
-
-
-    /*
-        If the wheel has already selected
-        someone for the first round, use
-        that player as the first player.
-    */
-
-    if (
-        state.round === 0 &&
-        state.spun &&
-        state.selected !== null
-    ) {
-
-        const players = state.players;
-
-        const selected = state.selected;
-
-
-        if (selected === 0) {
-
-            return [
-                [players[0], players[1]],
-                [players[2], players[3]]
-            ];
-
-        }
-
-
-        if (selected === 1) {
-
-            return [
-                [players[1], players[0]],
-                [players[2], players[3]]
-            ];
-
-        }
-
-
-        if (selected === 2) {
-
-            return [
-                [players[2], players[0]],
-                [players[1], players[3]]
-            ];
-
-        }
-
-
-        if (selected === 3) {
-
-            return [
-                [players[3], players[0]],
-                [players[1], players[2]]
-            ];
-
-        }
-
-    }
-
-
-    return rotations[state.round % 3];
-
-}
-
-
-// ==========================================
-// DRAW WHEEL
-// ==========================================
+/* ================= DRAW WHEEL ================= */
 
 function drawWheel() {
 
-    const canvas = $("wheel");
+  const canvas =
+    $("wheel");
 
-    if (!canvas) {
-        return;
-    }
+  if (!canvas) {
 
+    return;
 
-    const ctx = canvas.getContext("2d");
+  }
 
-    const width = canvas.width;
 
-    const height = canvas.height;
+  const ctx =
+    canvas.getContext("2d");
 
-    const radius =
-        Math.min(width, height) / 2 - 12;
 
-    const centerX = width / 2;
+  const w =
+    canvas.width;
 
-    const centerY = height / 2;
 
+  const h =
+    canvas.height;
 
-    ctx.clearRect(
-        0,
-        0,
-        width,
-        height
-    );
 
+  const r =
+    Math.min(w,h) / 2 - 12;
 
-    // No players yet
-    if (
-        state.players.some(
-            player => player === ""
-        )
-    ) {
 
-        ctx.beginPath();
+  const cx =
+    w / 2;
 
-        ctx.arc(
-            centerX,
-            centerY,
-            radius,
-            0,
-            Math.PI * 2
-        );
 
-        ctx.fillStyle = "#0b293b";
+  const cy =
+    h / 2;
 
-        ctx.fill();
 
-        ctx.strokeStyle = "#29485a";
+  ctx.clearRect(
+    0,
+    0,
+    w,
+    h
+  );
 
-        ctx.lineWidth = 4;
 
-        ctx.stroke();
+  const players =
+    state.players;
 
 
-        ctx.fillStyle = "#91a8b8";
+  if (
+    players.length < 4
+  ) {
 
-        ctx.font = "bold 15px Arial";
-
-        ctx.textAlign = "center";
-
-        ctx.fillText(
-            "ENTER 4 PLAYERS",
-            centerX,
-            centerY
-        );
-
-        return;
-
-    }
-
-
-    const slice =
-        Math.PI * 2 / 4;
-
-
-    // Rotate wheel
-    ctx.save();
-
-    ctx.translate(
-        centerX,
-        centerY
-    );
-
-    ctx.rotate(wheelAngle);
-
-
-    state.players.forEach(
-        (player, index) => {
-
-            const startAngle =
-                index * slice;
-
-
-            const endAngle =
-                startAngle + slice;
-
-
-            // Slice
-            ctx.beginPath();
-
-            ctx.moveTo(0, 0);
-
-            ctx.arc(
-                0,
-                0,
-                radius,
-                startAngle,
-                endAngle
-            );
-
-            ctx.closePath();
-
-
-            ctx.fillStyle =
-                wheelColors[index];
-
-            ctx.fill();
-
-
-            ctx.strokeStyle =
-                "#061827";
-
-            ctx.lineWidth = 4;
-
-            ctx.stroke();
-
-
-            // Player name
-            ctx.save();
-
-            ctx.rotate(
-                startAngle + slice / 2
-            );
-
-            ctx.translate(
-                radius * 0.62,
-                0
-            );
-
-            ctx.rotate(
-                Math.PI / 2
-            );
-
-
-            ctx.fillStyle =
-                "#041a27";
-
-            ctx.font =
-                "900 16px Arial";
-
-            ctx.textAlign =
-                "center";
-
-            ctx.textBaseline =
-                "middle";
-
-
-            const displayName =
-                player.length > 15
-                    ? player.substring(0, 15) + "..."
-                    : player;
-
-
-            ctx.fillText(
-                displayName,
-                0,
-                0
-            );
-
-
-            ctx.restore();
-
-        }
-    );
-
-
-    ctx.restore();
-
-
-    // Center circle
     ctx.beginPath();
 
     ctx.arc(
-        centerX,
-        centerY,
-        54,
-        0,
-        Math.PI * 2
+      cx,
+      cy,
+      r,
+      0,
+      Math.PI * 2
     );
 
     ctx.fillStyle =
-        "#071f31";
+      "#0b293b";
 
     ctx.fill();
 
-
     ctx.strokeStyle =
-        "#ffe000";
+      "#29485a";
 
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 4;
 
     ctx.stroke();
 
 
-    // DRAW text
     ctx.fillStyle =
-        "#ffe000";
+      "#91a8b8";
 
     ctx.font =
-        "900 13px Arial";
+      "bold 15px Arial";
 
     ctx.textAlign =
-        "center";
-
-    ctx.textBaseline =
-        "middle";
+      "center";
 
     ctx.fillText(
-        "DRAW",
-        centerX,
-        centerY
+      "ADD 4+ PLAYERS",
+      cx,
+      cy
     );
 
+    return;
+
+  }
+
+
+  const slice =
+    Math.PI * 2 /
+    players.length;
+
+
+  ctx.save();
+
+  ctx.translate(
+    cx,
+    cy
+  );
+
+  ctx.rotate(
+    wheelAngle
+  );
+
+
+  players.forEach(
+    (name, i) => {
+
+      const a =
+        i * slice;
+
+
+      ctx.beginPath();
+
+      ctx.moveTo(
+        0,
+        0
+      );
+
+      ctx.arc(
+        0,
+        0,
+        r,
+        a,
+        a + slice
+      );
+
+      ctx.closePath();
+
+
+      ctx.fillStyle =
+        colors[
+          i % colors.length
+        ];
+
+      ctx.fill();
+
+
+      ctx.strokeStyle =
+        "#061827";
+
+      ctx.lineWidth = 3;
+
+      ctx.stroke();
+
+
+      /*
+        Only show text for
+        reasonable wheel sizes.
+      */
+
+      ctx.save();
+
+      ctx.rotate(
+        a + slice / 2
+      );
+
+      ctx.translate(
+        r * .63,
+        0
+      );
+
+      ctx.rotate(
+        Math.PI / 2
+      );
+
+
+      ctx.fillStyle =
+        "#041a27";
+
+
+      let fontSize = 16;
+
+      if (
+        players.length > 16
+      ) {
+
+        fontSize = 11;
+
+      } else if (
+        players.length > 12
+      ) {
+
+        fontSize = 13;
+
+      }
+
+
+      ctx.font =
+        `900 ${fontSize}px Arial`;
+
+
+      ctx.textAlign =
+        "center";
+
+
+      ctx.textBaseline =
+        "middle";
+
+
+      const max =
+        players.length > 16
+          ? 9
+          : 14;
+
+
+      const label =
+        name.length > max
+          ? name.slice(0,max) + "…"
+          : name;
+
+
+      ctx.fillText(
+        label,
+        0,
+        0
+      );
+
+
+      ctx.restore();
+
+    }
+  );
+
+
+  ctx.restore();
+
+
+  /* CENTER */
+
+  ctx.beginPath();
+
+  ctx.arc(
+    cx,
+    cy,
+    54,
+    0,
+    Math.PI * 2
+  );
+
+  ctx.fillStyle =
+    "#071f31";
+
+  ctx.fill();
+
+  ctx.strokeStyle =
+    "#ffe000";
+
+  ctx.lineWidth = 3;
+
+  ctx.stroke();
+
+
+  ctx.fillStyle =
+    "#ffe000";
+
+  ctx.font =
+    "900 13px Arial";
+
+  ctx.textAlign =
+    "center";
+
+  ctx.textBaseline =
+    "middle";
+
+  ctx.fillText(
+    "DRAW",
+    cx,
+    cy
+  );
+
 }
 
 
-// ==========================================
-// SPIN WHEEL
-// ==========================================
+/* ================= SPIN ================= */
 
-function spinWheel() {
+function spin() {
 
-    if (
-        state.players.length !== 4 ||
-        state.players.some(
-            player => player === ""
-        )
-    ) {
+  if (
+    state.players.length < 4
+  ) {
 
-        toast(
-            "Start a session first."
-        );
-
-        return;
-
-    }
-
-
-    const button = $("spinBtn");
-
-    button.disabled = true;
-
-
-    // Random player
-    const selected =
-        Math.floor(Math.random() * 4);
-
-
-    const slice =
-        Math.PI * 2 / 4;
-
-
-    /*
-        Position selected player
-        under the top pointer.
-    */
-
-    const desiredAngle =
-        -Math.PI / 2 -
-        (
-            selected * slice +
-            slice / 2
-        );
-
-
-    const finalAngle =
-        desiredAngle +
-        (
-            5 +
-            Math.floor(Math.random() * 3)
-        ) * Math.PI * 2;
-
-
-    const startAngle =
-        wheelAngle;
-
-
-    const startTime =
-        performance.now();
-
-
-    const duration =
-        3400;
-
-
-    function animate(currentTime) {
-
-        const progress =
-            Math.min(
-                (currentTime - startTime) /
-                duration,
-                1
-            );
-
-
-        // Ease out
-        const easing =
-            1 -
-            Math.pow(
-                1 - progress,
-                3
-            );
-
-
-        wheelAngle =
-            startAngle +
-            (
-                finalAngle -
-                startAngle
-            ) * easing;
-
-
-        drawWheel();
-
-
-        if (progress < 1) {
-
-            requestAnimationFrame(
-                animate
-            );
-
-        } else {
-
-            state.selected =
-                selected;
-
-            state.spun = true;
-
-            saveData();
-
-
-            button.disabled = false;
-
-
-            $("drawResult").innerHTML = `
-
-                <div>
-
-                    <strong>
-                        ${escapeHTML(
-                            state.players[selected]
-                        )}
-                    </strong>
-
-                    <br>
-
-                    <small>
-                        Selected by the draw wheel
-                    </small>
-
-                </div>
-
-            `;
-
-
-            toast(
-                `${state.players[selected]} was selected.`
-            );
-
-        }
-
-    }
-
-
-    requestAnimationFrame(
-        animate
+    toast(
+      "You need at least 4 players."
     );
 
-}
+    return;
 
+  }
 
-// ==========================================
-// CHANGE ROUND
-// ==========================================
 
-function changeRound(direction) {
+  const btn =
+    $("spinBtn");
 
-    if (
-        !state.players.length ||
-        state.players.some(
-            player => player === ""
-        )
-    ) {
 
-        toast(
-            "Start a session first."
-        );
+  btn.disabled = true;
 
-        return;
 
-    }
-
-
-    state.round =
-        Math.max(
-            0,
-            state.round + direction
-        );
-
-
-    saveData();
-
-    renderMatch();
-
-
-    $("recordMessage").textContent = "";
-
-}
-
-
-// ==========================================
-// RENDER MATCH
-// ==========================================
-
-function renderMatch() {
-
-    const teams =
-        getCurrentTeams();
-
-
-    if (!teams) {
-        return;
-    }
-
-
-    $("roundNumber").textContent =
-        state.round + 1;
-
-
-    $("teamA1").textContent =
-        teams[0][0];
-
-
-    $("teamA2").textContent =
-        teams[0][1];
-
-
-    $("teamB1").textContent =
-        teams[1][0];
-
-
-    $("teamB2").textContent =
-        teams[1][1];
-
-}
-
-
-// ==========================================
-// RECORD MATCH
-// ==========================================
-
-function recordMatch() {
-
-    const teams =
-        getCurrentTeams();
-
-
-    if (!teams) {
-
-        toast(
-            "Start a session first."
-        );
-
-        return;
-
-    }
-
-
-    const scoreA =
-        Number($("scoreA").value);
-
-
-    const scoreB =
-        Number($("scoreB").value);
-
-
-    // Validate scores
-    if (
-        !Number.isInteger(scoreA) ||
-        !Number.isInteger(scoreB) ||
-        scoreA < 0 ||
-        scoreB < 0
-    ) {
-
-        toast(
-            "Enter valid scores."
-        );
-
-        return;
-
-    }
-
-
-    // Pickleball match cannot be tied
-    if (scoreA === scoreB) {
-
-        toast(
-            "A completed match cannot be tied."
-        );
-
-        return;
-
-    }
-
-
-    const round =
-        state.round + 1;
-
-
-    // Prevent duplicate recording
-    if (
-        state.matches.some(
-            match => match.round === round
-        )
-    ) {
-
-        toast(
-            "This round is already recorded."
-        );
-
-        return;
-
-    }
-
-
-    const match = {
-
-        id: Date.now(),
-
-        round: round,
-
-        teamA: [
-            ...teams[0]
-        ],
-
-        teamB: [
-            ...teams[1]
-        ],
-
-        scoreA: scoreA,
-
-        scoreB: scoreB
-
-    };
-
-
-    state.matches.push(match);
-
-
-    saveData();
-
-    render();
-
-
-    $("recordMessage").textContent =
-        `Round ${round} recorded successfully.`;
-
-
-    // Reset score
-    $("scoreA").value = 0;
-
-    $("scoreB").value = 0;
-
-
-    /*
-        Automatically move
-        to the next rotation.
-    */
-
-    setTimeout(() => {
-
-        state.round++;
-
-        saveData();
-
-        render();
-
-    }, 600);
-
-}
-
-
-// ==========================================
-// CLEAR SCORE
-// ==========================================
-
-function clearScore() {
-
-    $("scoreA").value = 0;
-
-    $("scoreB").value = 0;
-
-    $("recordMessage").textContent = "";
-
-}
-
-
-// ==========================================
-// CALCULATE PLAYER STATS
-// ==========================================
-
-function calculateStats() {
-
-    const stats = {};
-
-
-    // Create player records
-    state.players.forEach(player => {
-
-        stats[player] = {
-
-            name: player,
-
-            wins: 0,
-
-            losses: 0,
-
-            pointsFor: 0,
-
-            pointsAgainst: 0
-
-        };
-
-    });
-
-
-    // Process matches
-    state.matches.forEach(match => {
-
-        const teamAWon =
-            match.scoreA > match.scoreB;
-
-
-        // Team A
-        match.teamA.forEach(player => {
-
-            stats[player].pointsFor +=
-                match.scoreA;
-
-            stats[player].pointsAgainst +=
-                match.scoreB;
-
-
-            if (teamAWon) {
-
-                stats[player].wins++;
-
-            } else {
-
-                stats[player].losses++;
-
-            }
-
-        });
-
-
-        // Team B
-        match.teamB.forEach(player => {
-
-            stats[player].pointsFor +=
-                match.scoreB;
-
-            stats[player].pointsAgainst +=
-                match.scoreA;
-
-
-            if (teamAWon) {
-
-                stats[player].losses++;
-
-            } else {
-
-                stats[player].wins++;
-
-            }
-
-        });
-
-    });
-
-
-    return Object.values(stats).sort(
-        (a, b) => {
-
-            // Wins first
-            if (b.wins !== a.wins) {
-
-                return b.wins - a.wins;
-
-            }
-
-
-            // Then point difference
-            const diffA =
-                a.pointsFor -
-                a.pointsAgainst;
-
-            const diffB =
-                b.pointsFor -
-                b.pointsAgainst;
-
-
-            return diffB - diffA;
-
-        }
-    );
-
-}
-
-
-// ==========================================
-// RENDER STANDINGS
-// ==========================================
-
-function renderStandings() {
-
-    const standings =
-        calculateStats();
-
-
-    const body =
-        $("standingsBody");
-
-
-    body.innerHTML = "";
-
-
-    standings.forEach(
-        (player, index) => {
-
-            const games =
-                player.wins +
-                player.losses;
-
-
-            const difference =
-                player.pointsFor -
-                player.pointsAgainst;
-
-
-            const winPercentage =
-                games > 0
-                    ? (
-                        player.wins /
-                        games *
-                        100
-                    ).toFixed(0)
-                    : 0;
-
-
-            const row =
-                document.createElement("tr");
-
-
-            row.innerHTML = `
-
-                <td>
-                    ${index + 1}
-                </td>
-
-                <td>
-                    <b>
-                        ${escapeHTML(
-                            player.name
-                        )}
-                    </b>
-                </td>
-
-                <td>
-                    ${player.wins}
-                </td>
-
-                <td>
-                    ${player.losses}
-                </td>
-
-                <td>
-                    ${player.pointsFor}
-                </td>
-
-                <td>
-                    ${player.pointsAgainst}
-                </td>
-
-                <td class="${
-                    difference >= 0
-                        ? "positive"
-                        : "negative"
-                }">
-
-                    ${
-                        difference > 0
-                            ? "+"
-                            : ""
-                    }
-
-                    ${difference}
-
-                </td>
-
-                <td>
-                    ${winPercentage}%
-                </td>
-
-            `;
-
-
-            body.appendChild(row);
-
-        }
+  const selected =
+    Math.floor(
+      Math.random() *
+      state.players.length
     );
 
 
-    // Mini statistics
-    $("statMatches").textContent =
-        state.matches.length;
+  const slice =
+    Math.PI * 2 /
+    state.players.length;
 
 
-    $("statRounds").textContent =
-        Math.max(
-            1,
-            state.round + 1
-        );
+  const desired =
+    -Math.PI / 2 -
+    (
+      selected * slice +
+      slice / 2
+    );
 
 
-    $("statLeader").textContent =
-        state.matches.length &&
-        standings.length
-            ? standings[0].name
-            : "—";
+  const final =
+    desired +
+    (
+      5 +
+      Math.floor(
+        Math.random() * 3
+      )
+    ) *
+    Math.PI * 2;
 
-}
 
+  const start =
+    wheelAngle;
 
-// ==========================================
-// RENDER HISTORY
-// ==========================================
 
-function renderHistory() {
+  const t0 =
+    performance.now();
 
-    const container =
-        $("historyList");
 
+  const duration =
+    3400;
 
-    container.innerHTML = "";
 
+  function frame(now) {
 
-    if (state.matches.length === 0) {
+    const t =
+      Math.min(
+        (now - t0) /
+        duration,
+        1
+      );
 
-        container.innerHTML = `
 
-            <div class="empty">
+    const e =
+      1 -
+      Math.pow(
+        1 - t,
+        3
+      );
 
-                <strong>
-                    No matches recorded yet.
-                </strong>
 
-                Record a score and it will
-                appear here.
-
-            </div>
-
-        `;
-
-        return;
-
-    }
-
-
-    // Newest match first
-    const matches =
-        [...state.matches].reverse();
-
-
-    matches.forEach(match => {
-
-        const item =
-            document.createElement("div");
-
-
-        item.className =
-            "history-item";
-
-
-        item.innerHTML = `
-
-            <div class="history-round">
-
-                ROUND ${match.round}
-
-            </div>
-
-
-            <div class="history-team">
-
-                <b>
-                    ${escapeHTML(
-                        match.teamA.join(" + ")
-                    )}
-                </b>
-
-                <small>
-                    TEAM A
-                </small>
-
-            </div>
-
-
-            <div class="history-score">
-
-                ${match.scoreA}
-                -
-                ${match.scoreB}
-
-            </div>
-
-
-            <div class="history-team">
-
-                <b>
-                    ${escapeHTML(
-                        match.teamB.join(" + ")
-                    )}
-                </b>
-
-                <small>
-                    TEAM B
-                </small>
-
-            </div>
-
-        `;
-
-
-        container.appendChild(item);
-
-    });
-
-}
-
-
-// ==========================================
-// RENDER EVERYTHING
-// ==========================================
-
-function render() {
-
-    if (state.players.length === 4) {
-
-        state.players.forEach(
-            (player, index) => {
-
-                const input =
-                    $(`player${index + 1}`);
-
-
-                if (input) {
-
-                    input.value =
-                        player;
-
-                }
-
-            }
-        );
-
-    }
+    wheelAngle =
+      start +
+      (final - start) *
+      e;
 
 
     drawWheel();
 
-    renderMatch();
 
-    renderStandings();
-
-    renderHistory();
-
-
-    // Restore wheel result
     if (
-        state.spun &&
-        state.selected !== null
+      t < 1
     ) {
 
-        $("drawResult").innerHTML = `
+      requestAnimationFrame(
+        frame
+      );
 
-            <div>
+    } else {
 
-                <strong>
-                    ${escapeHTML(
-                        state.players[
-                            state.selected
-                        ]
-                    )}
-                </strong>
+      state.selected =
+        selected;
 
-                <br>
+      state.spun =
+        true;
 
-                <small>
-                    Selected by the draw wheel
-                </small>
 
-            </div>
+      /*
+        Put selected player
+        at beginning of rotation.
+      */
 
-        `;
+      const selectedName =
+        state.players[
+          selected
+        ];
+
+
+      state.rotationSeed = [
+        selectedName,
+
+        ...shuffle(
+          state.players.filter(
+            player =>
+              player !==
+              selectedName
+          )
+        )
+      ];
+
+
+      save();
+
+
+      btn.disabled = false;
+
+
+      $("drawResult").innerHTML = `
+        <div>
+          <strong>
+            ${esc(selectedName)}
+          </strong>
+
+          <br>
+
+          <small>
+            Selected by the draw wheel
+          </small>
+        </div>
+      `;
+
+
+      toast(
+        `${selectedName} was selected.`
+      );
 
     }
+
+  }
+
+
+  requestAnimationFrame(
+    frame
+  );
 
 }
 
 
-// ==========================================
-// CLEAR MATCH HISTORY
-// ==========================================
+/* ================= MATCH ================= */
+
+function changeRound(dir) {
+
+  if (
+    state.players.length < 4
+  ) {
+
+    toast(
+      "Start a session first."
+    );
+
+    return;
+
+  }
+
+
+  const newRound =
+    state.round + dir;
+
+
+  if (
+    newRound < 0
+  ) {
+
+    return;
+
+  }
+
+
+  state.round =
+    newRound;
+
+
+  save();
+
+  renderMatch();
+
+  $("recordMessage")
+    .textContent = "";
+
+}
+
+
+/* ================= RENDER MATCH ================= */
+
+function renderMatch() {
+
+  if (
+    state.players.length < 4
+  ) {
+
+    return;
+
+  }
+
+
+  const data =
+    getRoundMatches();
+
+
+  $("roundNumber")
+    .textContent =
+    state.round + 1;
+
+
+  const container =
+    $("courtsContainer");
+
+
+  container.innerHTML = "";
+
+
+  const grid =
+    document.createElement(
+      "div"
+    );
+
+
+  grid.className =
+    "courts-grid";
+
+
+  data.courts.forEach(
+    court => {
+
+      const courtDiv =
+        document.createElement(
+          "div"
+        );
+
+
+      courtDiv.className =
+        "court";
+
+
+      courtDiv.innerHTML = `
+
+        <div class="court-title">
+          COURT ${court.court}
+        </div>
+
+        <div class="court-half">
+
+          <span class="team-label">
+            TEAM A
+          </span>
+
+          <div class="court-player">
+            ${esc(court.teamA[0])}
+          </div>
+
+          <div class="court-player">
+            ${esc(court.teamA[1])}
+          </div>
+
+        </div>
+
+
+        <div class="court-net">
+          <span>NET</span>
+        </div>
+
+
+        <div class="court-half">
+
+          <span class="team-label">
+            TEAM B
+          </span>
+
+          <div class="court-player">
+            ${esc(court.teamB[0])}
+          </div>
+
+          <div class="court-player">
+            ${esc(court.teamB[1])}
+          </div>
+
+        </div>
+
+      `;
+
+
+      grid.appendChild(
+        courtDiv
+      );
+
+    }
+  );
+
+
+  container.appendChild(
+    grid
+  );
+
+
+  renderWaiting(
+    data.waiting
+  );
+
+
+  renderScoreboards(
+    data.courts
+  );
+
+}
+
+
+/* ================= WAITING ================= */
+
+function renderWaiting(
+  waiting
+) {
+
+  const container =
+    $("waitingContainer");
+
+
+  if (
+    !waiting.length
+  ) {
+
+    container.innerHTML = "";
+
+    return;
+
+  }
+
+
+  container.innerHTML = `
+
+    <div class="waiting-title">
+      WAITING / NEXT ROTATION
+    </div>
+
+    <div class="waiting-list">
+
+      ${waiting.map(
+        player => `
+          <span class="waiting-player">
+            ${esc(player)}
+          </span>
+        `
+      ).join("")}
+
+    </div>
+
+  `;
+
+}
+
+
+/* ================= SCOREBOARDS ================= */
+
+function renderScoreboards(
+  courts
+) {
+
+  const container =
+    $("scoreboardContainer");
+
+
+  container.innerHTML = "";
+
+
+  courts.forEach(
+    court => {
+
+      const card =
+        document.createElement(
+          "div"
+        );
+
+
+      card.className =
+        "score-card";
+
+
+      const match =
+        findMatch(
+          state.round + 1,
+          court.court
+        );
+
+
+      const scoreA =
+        match
+          ? match.scoreA
+          : 0;
+
+
+      const scoreB =
+        match
+          ? match.scoreB
+          : 0;
+
+
+      const recorded =
+        !!match;
+
+
+      card.innerHTML = `
+
+        <div class="score-card-title">
+          COURT ${court.court} • SCORE
+        </div>
+
+
+        <div class="scoreboard">
+
+          <div class="score-side">
+
+            <span>
+              TEAM A
+            </span>
+
+            <input
+              type="number"
+              min="0"
+              max="99"
+              value="${scoreA}"
+              id="scoreA_${court.court}"
+              ${recorded ? "disabled" : ""}
+            >
+
+            <div class="score-team-names">
+              ${esc(court.teamA.join(" + "))}
+            </div>
+
+          </div>
+
+
+          <div class="versus">
+            VS
+          </div>
+
+
+          <div class="score-side">
+
+            <span>
+              TEAM B
+            </span>
+
+            <input
+              type="number"
+              min="0"
+              max="99"
+              value="${scoreB}"
+              id="scoreB_${court.court}"
+              ${recorded ? "disabled" : ""}
+            >
+
+            <div class="score-team-names">
+              ${esc(court.teamB.join(" + "))}
+            </div>
+
+          </div>
+
+        </div>
+
+
+        <div class="score-actions">
+
+          ${
+            recorded
+
+            ? `
+              <button
+                class="btn ghost"
+                disabled
+              >
+                ✓ RECORDED
+              </button>
+            `
+
+            : `
+              <button
+                class="btn primary"
+                onclick="recordCourtMatch(${court.court})"
+              >
+                ✓ RECORD COURT ${court.court}
+              </button>
+            `
+          }
+
+        </div>
+
+      `;
+
+
+      container.appendChild(
+        card
+      );
+
+    }
+  );
+
+}
+
+
+/* ================= FIND MATCH ================= */
+
+function findMatch(
+  round,
+  court
+) {
+
+  return state.matches.find(
+    match =>
+      match.round === round &&
+      match.court === court
+  );
+
+}
+
+
+/* ================= RECORD MATCH ================= */
+
+function recordCourtMatch(
+  courtNumber
+) {
+
+  const data =
+    getRoundMatches();
+
+
+  const court =
+    data.courts.find(
+      c =>
+        c.court ===
+        courtNumber
+    );
+
+
+  if (!court) {
+
+    toast(
+      "Court not found."
+    );
+
+    return;
+
+  }
+
+
+  const scoreA =
+    Number(
+      $(
+        `scoreA_${courtNumber}`
+      ).value
+    );
+
+
+  const scoreB =
+    Number(
+      $(
+        `scoreB_${courtNumber}`
+      ).value
+    );
+
+
+  if (
+    !Number.isInteger(scoreA) ||
+    !Number.isInteger(scoreB) ||
+    scoreA < 0 ||
+    scoreB < 0
+  ) {
+
+    toast(
+      "Enter valid scores."
+    );
+
+    return;
+
+  }
+
+
+  if (
+    scoreA === scoreB
+  ) {
+
+    toast(
+      "A completed match cannot be tied."
+    );
+
+    return;
+
+  }
+
+
+  const round =
+    state.round + 1;
+
+
+  if (
+    findMatch(
+      round,
+      courtNumber
+    )
+  ) {
+
+    toast(
+      "This court has already been recorded."
+    );
+
+    return;
+
+  }
+
+
+  state.matches.push({
+
+    id: Date.now(),
+
+    round,
+
+    court: courtNumber,
+
+    teamA: [
+      ...court.teamA
+    ],
+
+    teamB: [
+      ...court.teamB
+    ],
+
+    scoreA,
+
+    scoreB
+
+  });
+
+
+  save();
+
+  render();
+
+  $("recordMessage")
+    .textContent =
+    `Court ${courtNumber}, Round ${round} recorded successfully.`;
+
+
+  toast(
+    `Court ${courtNumber} recorded.`
+  );
+
+
+  /*
+    Automatically move to next round
+    only when ALL courts have scores.
+  */
+
+  const totalCourts =
+    getCourtCount();
+
+
+  const recordedCourts =
+    state.matches.filter(
+      match =>
+        match.round === round
+    ).length;
+
+
+  if (
+    recordedCourts ===
+    totalCourts
+  ) {
+
+    setTimeout(
+      () => {
+
+        state.round++;
+
+        save();
+
+        render();
+
+        $("recordMessage")
+          .textContent =
+          `Round ${round} complete. Round ${state.round + 1} is ready.`;
+
+      },
+      700
+    );
+
+  }
+
+}
+
+
+/* ================= STANDINGS ================= */
+
+function stats() {
+
+  const s = {};
+
+
+  state.players.forEach(
+    player => {
+
+      s[player] = {
+
+        name: player,
+
+        w: 0,
+
+        l: 0,
+
+        pf: 0,
+
+        pa: 0
+
+      };
+
+    }
+  );
+
+
+  state.matches.forEach(
+    match => {
+
+      const teamAWon =
+        match.scoreA >
+        match.scoreB;
+
+
+      match.teamA.forEach(
+        player => {
+
+          if (!s[player]) {
+
+            return;
+
+          }
+
+
+          s[player].pf +=
+            match.scoreA;
+
+          s[player].pa +=
+            match.scoreB;
+
+
+          if (teamAWon) {
+
+            s[player].w++;
+
+          } else {
+
+            s[player].l++;
+
+          }
+
+        }
+      );
+
+
+      match.teamB.forEach(
+        player => {
+
+          if (!s[player]) {
+
+            return;
+
+          }
+
+
+          s[player].pf +=
+            match.scoreB;
+
+          s[player].pa +=
+            match.scoreA;
+
+
+          if (teamAWon) {
+
+            s[player].l++;
+
+          } else {
+
+            s[player].w++;
+
+          }
+
+        }
+      );
+
+    }
+  );
+
+
+  return Object
+    .values(s)
+    .sort(
+      (a,b) =>
+        b.w - a.w ||
+        (b.pf - b.pa) -
+        (a.pf - a.pa)
+    );
+
+}
+
+
+/* ================= RENDER STANDINGS ================= */
+
+function renderStandings() {
+
+  const arr =
+    stats();
+
+
+  const body =
+    $("standingsBody");
+
+
+  if (!body) {
+
+    return;
+
+  }
+
+
+  body.innerHTML = "";
+
+
+  arr.forEach(
+    (player,index) => {
+
+      const games =
+        player.w +
+        player.l;
+
+
+      const diff =
+        player.pf -
+        player.pa;
+
+
+      const rate =
+        games
+          ? (
+              player.w /
+              games *
+              100
+            ).toFixed(0)
+          : 0;
+
+
+      const tr =
+        document.createElement(
+          "tr"
+        );
+
+
+      tr.innerHTML = `
+
+        <td>
+          ${index + 1}
+        </td>
+
+        <td>
+          <b>
+            ${esc(player.name)}
+          </b>
+        </td>
+
+        <td>
+          ${player.w}
+        </td>
+
+        <td>
+          ${player.l}
+        </td>
+
+        <td>
+          ${player.pf}
+        </td>
+
+        <td>
+          ${player.pa}
+        </td>
+
+        <td
+          class="${
+            diff >= 0
+              ? "positive"
+              : "negative"
+          }"
+        >
+          ${
+            diff > 0
+              ? "+"
+              : ""
+          }${diff}
+        </td>
+
+        <td>
+          ${rate}%
+        </td>
+
+      `;
+
+
+      body.appendChild(
+        tr
+      );
+
+    }
+  );
+
+
+  $("statMatches")
+    .textContent =
+    state.matches.length;
+
+
+  $("statRounds")
+    .textContent =
+    Math.max(
+      1,
+      state.round + 1
+    );
+
+
+  $("statLeader")
+    .textContent =
+    state.matches.length &&
+    arr.length
+      ? arr[0].name
+      : "—";
+
+}
+
+
+/* ================= HISTORY ================= */
+
+function renderHistory() {
+
+  const box =
+    $("historyList");
+
+
+  box.innerHTML = "";
+
+
+  if (
+    !state.matches.length
+  ) {
+
+    box.innerHTML = `
+
+      <div class="empty">
+
+        <strong>
+          No matches recorded yet.
+        </strong>
+
+        Record a score and it
+        will appear here.
+
+      </div>
+
+    `;
+
+    return;
+
+  }
+
+
+  [
+    ...state.matches
+  ]
+    .reverse()
+    .forEach(
+      match => {
+
+        const div =
+          document.createElement(
+            "div"
+          );
+
+
+        div.className =
+          "history-item";
+
+
+        div.innerHTML = `
+
+          <div class="history-round">
+
+            ROUND ${match.round}
+            <br>
+            COURT ${match.court}
+
+          </div>
+
+
+          <div class="history-team">
+
+            <b>
+              ${esc(
+                match.teamA.join(
+                  " + "
+                )
+              )}
+            </b>
+
+            <small>
+              TEAM A
+            </small>
+
+          </div>
+
+
+          <div class="history-score">
+
+            ${match.scoreA}
+            -
+            ${match.scoreB}
+
+          </div>
+
+
+          <div class="history-team">
+
+            <b>
+              ${esc(
+                match.teamB.join(
+                  " + "
+                )
+              )}
+            </b>
+
+            <small>
+              TEAM B
+            </small>
+
+          </div>
+
+        `;
+
+
+        box.appendChild(
+          div
+        );
+
+      }
+    );
+
+}
+
+
+/* ================= RENDER ================= */
+
+function render() {
+
+  renderPlayers();
+
+  renderRosterStats();
+
+  drawWheel();
+
+  renderMatch();
+
+  renderStandings();
+
+  renderHistory();
+
+
+  if (
+    state.spun &&
+    state.selected !== null &&
+    state.players[
+      state.selected
+    ]
+  ) {
+
+    $("drawResult").innerHTML = `
+
+      <div>
+
+        <strong>
+          ${esc(
+            state.players[
+              state.selected
+            ]
+          )}
+        </strong>
+
+        <br>
+
+        <small>
+          Selected by the draw wheel
+        </small>
+
+      </div>
+
+    `;
+
+  }
+
+}
+
+
+/* ================= PLAYER UI ================= */
+
+function renderPlayers() {
+
+  const list =
+    $("playerList");
+
+
+  list.innerHTML = "";
+
+
+  state.players.forEach(
+    (player,index) => {
+
+      const card =
+        document.createElement(
+          "div"
+        );
+
+
+      card.className =
+        "player-card";
+
+
+      card.innerHTML = `
+
+        <span class="player-number">
+          ${String(
+            index + 1
+          ).padStart(2,"0")}
+        </span>
+
+        <span class="player-name">
+          ${esc(player)}
+        </span>
+
+        <button
+          class="remove-player"
+          title="Remove player"
+          onclick="removePlayer(${index})"
+        >
+          ×
+        </button>
+
+      `;
+
+
+      list.appendChild(
+        card
+      );
+
+    }
+  );
+
+}
+
+
+/* ================= ROSTER STATS ================= */
+
+function renderRosterStats() {
+
+  const players =
+    state.players.length;
+
+
+  const courts =
+    Math.floor(
+      players / 4
+    );
+
+
+  const waiting =
+    players % 4;
+
+
+  $("playerCount")
+    .textContent =
+    players;
+
+
+  $("courtCount")
+    .textContent =
+    courts;
+
+
+  $("waitingCount")
+    .textContent =
+    waiting;
+
+}
+
+
+/* ================= CLEAR HISTORY ================= */
 
 function clearHistory() {
 
-    if (
-        state.matches.length === 0
-    ) {
+  if (
+    !state.matches.length
+  ) {
 
-        toast(
-            "There is no history to clear."
-        );
+    toast(
+      "There is no history to clear."
+    );
 
-        return;
+    return;
 
-    }
-
-
-    const confirmed =
-        confirm(
-            "Clear all recorded matches?"
-        );
+  }
 
 
-    if (!confirmed) {
-        return;
-    }
-
+  if (
+    confirm(
+      "Clear all recorded matches?"
+    )
+  ) {
 
     state.matches = [];
 
     state.round = 0;
 
-    saveData();
+    save();
 
     render();
 
-
     toast(
-        "Match history cleared."
+      "Match history cleared."
+    );
+
+  }
+
+}
+
+
+/* ================= SHUFFLE ================= */
+
+function shuffle(array) {
+
+  for (
+    let i = array.length - 1;
+    i > 0;
+    i--
+  ) {
+
+    const j =
+      Math.floor(
+        Math.random() *
+        (i + 1)
+      );
+
+
+    [
+      array[i],
+      array[j]
+    ] = [
+      array[j],
+      array[i]
+    ];
+
+  }
+
+
+  return array;
+
+}
+
+
+/* ================= ESCAPE HTML ================= */
+
+function esc(value) {
+
+  return String(value)
+    .replace(
+      /[&<>"']/g,
+      character => ({
+
+        "&": "&amp;",
+
+        "<": "&lt;",
+
+        ">": "&gt;",
+
+        '"': "&quot;",
+
+        "'": "&#039;"
+
+      }[character])
     );
 
 }
 
 
-// ==========================================
-// TOAST MESSAGE
-// ==========================================
+/* ================= TOAST ================= */
 
 function toast(message) {
 
-    const element =
-        $("toast");
+  const t =
+    $("toast");
 
 
-    element.textContent =
-        message;
+  t.textContent =
+    message;
 
 
-    element.classList.add(
-        "show"
-    );
+  t.classList.add(
+    "show"
+  );
 
 
-    clearTimeout(
-        window.__toast
-    );
+  clearTimeout(
+    window.__toast
+  );
 
 
-    window.__toast =
-        setTimeout(() => {
-
-            element.classList.remove(
-                "show"
-            );
-
-        }, 2600);
-
-}
-
-
-// ==========================================
-// SECURITY / HTML ESCAPING
-// ==========================================
-
-function escapeHTML(value) {
-
-    return String(value).replace(
-        /[&<>"']/g,
-        character => {
-
-            const characters = {
-
-                "&": "&amp;",
-
-                "<": "&lt;",
-
-                ">": "&gt;",
-
-                '"': "&quot;",
-
-                "'": "&#039;"
-
-            };
-
-
-            return characters[
-                character
-            ];
-
-        }
+  window.__toast =
+    setTimeout(
+      () =>
+        t.classList.remove(
+          "show"
+        ),
+      2600
     );
 
 }
